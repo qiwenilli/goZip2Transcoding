@@ -88,11 +88,11 @@ func Unzip(src, dest string) error {
             sourceBuf := bufio.NewReader(rc)
             file_contents,_ := ioutil.ReadAll(sourceBuf)
 
-            //
-            output_str := iconvO.ConvString( string(file_contents) )
+            //这里把文件的编码格式更换掉
+            output_str :=  strings.Replace( string(file_contents),"CHARSET=utf8","CHARSET=gbk",-1)
+            //output_str := iconvO.ConvString( string(file_contents) )
+            output_str = iconvO.ConvString( output_str )
             if len(output_str)>0 {
-                output_str =  strings.Replace(output_str,"CHARSET=utf8","CHARSET=gbk",-1)
-
                 desf.WriteString(output_str)
             }else{
                 desf.Write(file_contents)
