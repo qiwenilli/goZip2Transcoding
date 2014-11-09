@@ -91,6 +91,8 @@ func Unzip(src, dest string) error {
             //
             output_str := iconvO.ConvString( string(file_contents) )
             if len(output_str)>0 {
+                output_str =  strings.Replace(output_str,"CHARSET=utf8","CHARSET=gbk",-1)
+
                 desf.WriteString(output_str)
             }else{
                 desf.Write(file_contents)
