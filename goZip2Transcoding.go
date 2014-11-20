@@ -99,8 +99,8 @@ func Unzip(src, dest string) error {
 			} else {
 				desf.Write(file_contents)
 			}
-			//    fmt.Println( despath, len(output_str), err )
-
+            fmt.Println( despath, len(output_str), err )
+            //
 			desf.Close()
 		}
 	}
@@ -185,7 +185,7 @@ func phpwind_case(fpath string, str *string) {
             *str = strings.Replace( *str,"\""+from_chartset+"\"","\""+out_charset+"\"",-1)
             *str = strings.Replace( *str,"'"+from_chartset+"'","'"+out_charset+"'",-1)
             //
-            fmt.Println(  fpath  )
+            //fmt.Println(  fpath  )
 			break
 		}
 
