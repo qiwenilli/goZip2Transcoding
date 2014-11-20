@@ -1,9 +1,9 @@
 /*###############################################################################
 #     FileName: goZip2Transcoding.go
 #       Author: qiwen<34214399@qq.com>
-#     HomePage: http://www.phpwind.net
+#     HomePage: http://weibo.com/qiwen
 #      Version: $Id
-#   LastChange: 2014-11-09 15:47:04
+#   LastChange: 2014-11-20 19:21:27
 #         Desc:
 ###############################################################################*/
 package main
