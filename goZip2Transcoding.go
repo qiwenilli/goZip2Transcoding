@@ -10,13 +10,13 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
-    "bufio"
-    "github.com/qiniu/iconv"
-    //iconv "github.com/djimenez/iconv-go"
-    "io"
+	"github.com/qiniu/iconv"
+	//iconv "github.com/djimenez/iconv-go"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -55,7 +55,7 @@ func main() {
 	//
 	Unzip(*_s, des_path)
 	//
-//	compress(des_path, des_path+".zip")
+	//	compress(des_path, des_path+".zip")
 }
 
 func Unzip(src, dest string) error {
@@ -65,10 +65,10 @@ func Unzip(src, dest string) error {
 	}
 	defer r.Close()
 
-    iconv_obj,_ := iconv.Open(out_charset+"//TRANSLIT", from_chartset) 
-    defer iconv_obj.Close()
+	iconv_obj, _ := iconv.Open(out_charset+"//TRANSLIT", from_chartset)
+	defer iconv_obj.Close()
 
-    //
+	//
 	for _, f := range r.File {
 		rc, err := f.Open()
 		if err != nil {
@@ -76,44 +76,44 @@ func Unzip(src, dest string) error {
 		}
 		defer rc.Close()
 
-        //
+		//
 		despath := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(despath, f.Mode())
 		} else {
 
-            ext := filepath.Ext(f.Name)
-            if len(ext)>1 {
-                ext  = ext[1:]
-            }
-            if ( strings.Index(f.Name, "LICENSE")>-1 || ext=="php" || ext=="sql" || ext=="htm" || ext=="html" || ext=="xml" || ext=="js" || ext=="css" || ext=="lang" || ext=="txt" || ext=="tpl") {
+			ext := filepath.Ext(f.Name)
+			if len(ext) > 1 {
+				ext = ext[1:]
+			}
+			if strings.Index(f.Name, "LICENSE") > -1 || ext == "php" || ext == "sql" || ext == "htm" || ext == "html" || ext == "xml" || ext == "js" || ext == "css" || ext == "lang" || ext == "txt" || ext == "tpl" {
 
-                rrc := bufio.NewReader(rc)
-                file_contents, _ := ioutil.ReadAll(rrc)
-                output_str := string(file_contents)
-               
-                output_str = iconv_obj.ConvString(output_str)
+				rrc := bufio.NewReader(rc)
+				file_contents, _ := ioutil.ReadAll(rrc)
+				output_str := string(file_contents)
 
-                phpwind_case(despath, &output_str)
+				output_str = iconv_obj.ConvString(output_str)
 
-                fmt.Println("-->", despath,ext  ) 
+				phpwind_case(despath, &output_str)
 
-                ioutil.WriteFile(despath,[]byte(output_str),0644)
+				fmt.Println("-->", despath, ext)
+
+				ioutil.WriteFile(despath, []byte(output_str), 0644)
 
 			} else {
 
-                desf,_ := os.Create(despath)
+				desf, _ := os.Create(despath)
 
-                //desf,_ := os.Create(despath)
-                defer desf.Close()
+				//desf,_ := os.Create(despath)
+				defer desf.Close()
 
-                _,err := io.Copy(desf,rc)
+				_, err := io.Copy(desf, rc)
 
-                fmt.Println( despath,ext,err  ) 
-               // ioutil.WriteFile(despath,file_contents,0644)
+				fmt.Println(despath, ext, err)
+				// ioutil.WriteFile(despath,file_contents,0644)
 			}
-//            fmt.Println( despath, len(output_str), err )
-        }
+			//            fmt.Println( despath, len(output_str), err )
+		}
 	}
 	return nil
 }
@@ -176,35 +176,34 @@ func compress(frm, dst string) error {
 }
 
 func CopyFile(source string, dest string) (err error) {
-    sourcefile, err := os.Open(source)
-    if err != nil {
-        return err
-    }
+	sourcefile, err := os.Open(source)
+	if err != nil {
+		return err
+	}
 
-    defer sourcefile.Close()
+	defer sourcefile.Close()
 
-    destfile, err := os.Create(dest)
-    if err != nil {
-        return err
-    }
+	destfile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
 
-    defer destfile.Close()
+	defer destfile.Close()
 
-    _, err = io.Copy(destfile, sourcefile)
-    if err == nil {
-        sourceinfo, err := os.Stat(source)
-        if err != nil {
-            err = os.Chmod(dest, sourceinfo.Mode())
-        }
-    }
-    return
+	_, err = io.Copy(destfile, sourcefile)
+	if err == nil {
+		sourceinfo, err := os.Stat(source)
+		if err != nil {
+			err = os.Chmod(dest, sourceinfo.Mode())
+		}
+	}
+	return
 }
-
 
 func phpwind_case(fpath string, str *string) {
 
 	feature_list := []string{
-        "database.php",
+		"database.php",
 		"config.php",
 		"phpwind.php",
 		"default.php",
@@ -213,24 +212,24 @@ func phpwind_case(fpath string, str *string) {
 	}
 
 	for _, feature := range feature_list {
-        
-        _from_chartset := from_chartset 
-        if _from_chartset=="utf-8"{
-            _from_chartset="utf8" 
-        }
 
-		if strings.Index(fpath, feature) > -1 && (strings.Index(*str, from_chartset) > -1 || strings.Index(*str, _from_chartset) > -1 || strings.Index(*str, strings.ToUpper(from_chartset)) > -1 || strings.Index(*str, strings.ToUpper(_from_chartset)) > -1 ) {
+		_from_chartset := from_chartset
+		if _from_chartset == "utf-8" {
+			_from_chartset = "utf8"
+		}
 
-            //*str = strings.Replace( *str,"CHARSET="+_from_chartset,"CHARSET="+out_charset,-1)
-            *str = strings.Replace( *str,"\""+from_chartset+"\"","\""+out_charset+"\"",-1)
-            *str = strings.Replace( *str,"'"+from_chartset+"'","'"+out_charset+"'",-1)
-           // *str = strings.Replace( *str,"CHARSET="+strings.ToUpper(_from_chartset),"CHARSET="+out_charset,-1)
-            //
-           
-            *str = strings.Replace( *str,"\""+strings.ToUpper(from_chartset)+"\"","\""+out_charset+"\"",-1)
-            *str = strings.Replace( *str,"'"+strings.ToUpper(from_chartset)+"'","'"+out_charset+"'",-1)
-            
-            //fmt.Println(  fpath  )
+		if strings.Index(fpath, feature) > -1 && (strings.Index(*str, from_chartset) > -1 || strings.Index(*str, _from_chartset) > -1 || strings.Index(*str, strings.ToUpper(from_chartset)) > -1 || strings.Index(*str, strings.ToUpper(_from_chartset)) > -1) {
+
+			//*str = strings.Replace( *str,"CHARSET="+_from_chartset,"CHARSET="+out_charset,-1)
+			*str = strings.Replace(*str, "\""+from_chartset+"\"", "\""+out_charset+"\"", -1)
+			*str = strings.Replace(*str, "'"+from_chartset+"'", "'"+out_charset+"'", -1)
+			// *str = strings.Replace( *str,"CHARSET="+strings.ToUpper(_from_chartset),"CHARSET="+out_charset,-1)
+			//
+
+			*str = strings.Replace(*str, "\""+strings.ToUpper(from_chartset)+"\"", "\""+out_charset+"\"", -1)
+			*str = strings.Replace(*str, "'"+strings.ToUpper(from_chartset)+"'", "'"+out_charset+"'", -1)
+
+			//fmt.Println(  fpath  )
 			break
 		}
 
