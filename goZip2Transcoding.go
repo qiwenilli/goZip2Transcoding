@@ -3,18 +3,20 @@
 #       Author: qiwen<34214399@qq.com>
 #     HomePage: http://weibo.com/qiwen
 #      Version: $Id
-#   LastChange: 2014-11-20 19:21:27
+#   LastChange: 2014-11-21 20:38:17
 #         Desc:
 ###############################################################################*/
 package main
 
 import (
 	"archive/zip"
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/qiniu/iconv"
+    "bufio"
+    "github.com/qiniu/iconv"
+    //iconv "github.com/djimenez/iconv-go"
+    "io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -53,7 +55,7 @@ func main() {
 	//
 	Unzip(*_s, des_path)
 	//
-	compress(des_path, des_path+".zip")
+//	compress(des_path, des_path+".zip")
 }
 
 func Unzip(src, dest string) error {
@@ -63,46 +65,55 @@ func Unzip(src, dest string) error {
 	}
 	defer r.Close()
 
-	iconvO, _ := iconv.Open(out_charset, from_chartset)
-	defer iconvO.Close()
+    iconv_obj,_ := iconv.Open(out_charset+"//TRANSLIT", from_chartset) 
+    defer iconv_obj.Close()
 
+    //
 	for _, f := range r.File {
 		rc, err := f.Open()
 		if err != nil {
 			continue
-			//return err
 		}
 		defer rc.Close()
 
+        //
 		despath := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(despath, f.Mode())
 		} else {
-			//f, err := os.OpenFile( path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode() )
-			desf, err := os.Create(despath)
-			if err != nil {
-				return err
-			}
 
-			sourceBuf := bufio.NewReader(rc)
-			file_contents, _ := ioutil.ReadAll(sourceBuf)
+            ext := filepath.Ext(f.Name)
+            if len(ext)>1 {
+                ext  = ext[1:]
+            }
+            if ( strings.Index(f.Name, "LICENSE")>-1 || ext=="php" || ext=="sql" || ext=="htm" || ext=="html" || ext=="xml" || ext=="js" || ext=="css" || ext=="lang" || ext=="txt" || ext=="tpl") {
 
-			//phpwind_case
-			output_str := string(file_contents)
+                rrc := bufio.NewReader(rc)
+                file_contents, _ := ioutil.ReadAll(rrc)
+                output_str := string(file_contents)
+               
+                output_str = iconv_obj.ConvString(output_str)
 
-			phpwind_case(despath, &output_str)
+                phpwind_case(despath, &output_str)
 
-			//output_str := iconvO.ConvString( string(file_contents) )
-			output_str = iconvO.ConvString(output_str)
-			if len(output_str) > 0 {
-				desf.WriteString(output_str)
+                fmt.Println("-->", despath,ext  ) 
+
+                ioutil.WriteFile(despath,[]byte(output_str),0644)
+
 			} else {
-				desf.Write(file_contents)
+
+                desf,_ := os.Create(despath)
+
+                //desf,_ := os.Create(despath)
+                defer desf.Close()
+
+                _,err := io.Copy(desf,rc)
+
+                fmt.Println( despath,ext,err  ) 
+               // ioutil.WriteFile(despath,file_contents,0644)
 			}
-            fmt.Println( despath, len(output_str), err )
-            //
-			desf.Close()
-		}
+//            fmt.Println( despath, len(output_str), err )
+        }
 	}
 	return nil
 }
@@ -164,6 +175,32 @@ func compress(frm, dst string) error {
 
 }
 
+func CopyFile(source string, dest string) (err error) {
+    sourcefile, err := os.Open(source)
+    if err != nil {
+        return err
+    }
+
+    defer sourcefile.Close()
+
+    destfile, err := os.Create(dest)
+    if err != nil {
+        return err
+    }
+
+    defer destfile.Close()
+
+    _, err = io.Copy(destfile, sourcefile)
+    if err == nil {
+        sourceinfo, err := os.Stat(source)
+        if err != nil {
+            err = os.Chmod(dest, sourceinfo.Mode())
+        }
+    }
+    return
+}
+
+
 func phpwind_case(fpath string, str *string) {
 
 	feature_list := []string{
@@ -176,15 +213,23 @@ func phpwind_case(fpath string, str *string) {
 	}
 
 	for _, feature := range feature_list {
-		if strings.Index(fpath, feature) > -1 && (strings.Index(*str, "utf8") > -1 || strings.Index(*str, "utf-8") > -1) {
-            _from_chartset := from_chartset 
-            if _from_chartset=="utf-8"{
-               _from_chartset="utf8" 
-            }
-            *str = strings.Replace( *str,"CHARSET="+_from_chartset,"CHARSET="+out_charset,-1)
+        
+        _from_chartset := from_chartset 
+        if _from_chartset=="utf-8"{
+            _from_chartset="utf8" 
+        }
+
+		if strings.Index(fpath, feature) > -1 && (strings.Index(*str, from_chartset) > -1 || strings.Index(*str, _from_chartset) > -1 || strings.Index(*str, strings.ToUpper(from_chartset)) > -1 || strings.Index(*str, strings.ToUpper(_from_chartset)) > -1 ) {
+
+            //*str = strings.Replace( *str,"CHARSET="+_from_chartset,"CHARSET="+out_charset,-1)
             *str = strings.Replace( *str,"\""+from_chartset+"\"","\""+out_charset+"\"",-1)
             *str = strings.Replace( *str,"'"+from_chartset+"'","'"+out_charset+"'",-1)
+           // *str = strings.Replace( *str,"CHARSET="+strings.ToUpper(_from_chartset),"CHARSET="+out_charset,-1)
             //
+           
+            *str = strings.Replace( *str,"\""+strings.ToUpper(from_chartset)+"\"","\""+out_charset+"\"",-1)
+            *str = strings.Replace( *str,"'"+strings.ToUpper(from_chartset)+"'","'"+out_charset+"'",-1)
+            
             //fmt.Println(  fpath  )
 			break
 		}
